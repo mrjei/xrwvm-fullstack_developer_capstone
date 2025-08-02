@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth import logout
 from django.contrib import messages
 from datetime import datetime
-from .restapis import get_request
+from .restapis import get_request, analyze_review_sentiments, post_review
 from django.http import JsonResponse
 from django.contrib.auth import login, authenticate
 import logging
@@ -81,16 +81,41 @@ def registration(request):
 # ...
 
 # Create a `get_dealer_reviews` view to render the reviews of a dealer
-# def get_dealer_reviews(request,dealer_id):
-# ...
+def get_dealer_reviews(request, dealer_id):
+    # if dealer id has been provided
+    if(dealer_id):
+        endpoint = "/fetchReviews/dealer/"+str(dealer_id)
+        reviews = get_request(endpoint)
+        for review_detail in reviews:
+            response = analyze_review_sentiments(review_detail['review'])
+            print(response)
+            review_detail['sentiment'] = response['sentiment']
+        return JsonResponse({"status":200,"reviews":reviews})
+    else:
+        return JsonResponse({"status":400,"message":"Bad Request"})
 
 # Create a `get_dealer_details` view to render the dealer details
-# def get_dealer_details(request, dealer_id):
-# ...
+def get_dealer_details(request, dealer_id):
+    if dealer_id:
+        endpoint = f"/fetchDealer/{dealer_id}"
+        dealership = get_request(endpoint)
+        if dealership and len(dealership) > 0:
+            dealership = dealership[0]
+        return JsonResponse({"status": 200, "dealer": dealership})
+    else:
+        return JsonResponse({"status": 400, "message": "Bad Request"})
 
 # Create a `add_review` view to submit a review
-# def add_review(request):
-# ...
+def add_review(request):
+    if(request.user.is_anonymous == False):
+        data = json.loads(request.body)
+        try:
+            response = post_review(data)
+            return JsonResponse({"status":200})
+        except:
+            return JsonResponse({"status":401,"message":"Error in posting review"})
+    else:
+        return JsonResponse({"status":403,"message":"Unauthorized"})
 
 def get_cars(request):
     count = CarMake.objects.filter().count()
@@ -103,29 +128,12 @@ def get_cars(request):
         cars.append({"CarModel": car_model.name, "CarMake": car_model.car_make.name})
     return JsonResponse({"CarModels":cars})
 
+#Update the `get_dealerships` render list of dealerships all by default, particular state if state is passed
+#Took a long time to debug blank dealers
 def get_dealerships(request, state="All"):
-    if state == "All":
+    if(state == "All"):
         endpoint = "/fetchDealers"
     else:
-        endpoint = f"/fetchDealers/{state}"
-    
+        endpoint = "/fetchDealers/"+state
     dealerships = get_request(endpoint)
-    return JsonResponse({"status": 200, "dealers": dealerships})
-
-def get_dealer_details(request, dealer_id):
-    if dealer_id:
-        endpoint = f"/fetchDealer/{dealer_id}"
-        dealership = get_request(endpoint)
-        if dealership and len(dealership) > 0:
-            dealership = dealership[0]
-        return JsonResponse({"status": 200, "dealer": dealership})
-    else:
-        return JsonResponse({"status": 400, "message": "Bad Request"})
-
-def get_dealer_reviews(request, dealer_id):
-    if dealer_id:
-        endpoint = f"/fetchReviews/dealer/{dealer_id}"
-        reviews = get_request(endpoint)
-        return JsonResponse({"status": 200, "reviews": reviews})
-    else:
-        return JsonResponse({"status": 400, "message": "Bad Request"})
+    return JsonResponse({"status":200,"dealers":dealerships})

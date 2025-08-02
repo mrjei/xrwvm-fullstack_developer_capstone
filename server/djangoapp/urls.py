@@ -17,7 +17,8 @@ urlpatterns = [
     path(route='get_dealer/<int:dealer_id>/', view=views.get_dealer_details, name='get_dealer_details'),
     path(route='get_dealer_reviews/<int:dealer_id>/', view=views.get_dealer_reviews, name='get_dealer_reviews'),
     path(route='dealer/<int:dealer_id>/', view=views.get_dealer_details, name='dealer_details'),
-    path(route='reviews/dealer/<int:dealer_id>/', view=views.get_dealer_reviews, name='dealer_reviews')
+    path(route='reviews/dealer/<int:dealer_id>/', view=views.get_dealer_reviews, name='dealer_reviews'),
+    path(route='add_review', view=views.add_review, name='add_review'),
 
     # path for dealer reviews view
 
